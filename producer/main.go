@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 	// "encoding/json"
 
@@ -29,6 +30,8 @@ type myJSON struct {
 }
 
 func produce(ctx context.Context, timeoutMs int, limit int)  {
+	var wg sync.WaitGroup
+
 	i := 0
 
 	w := kafka.NewWriter(kafka.WriterConfig{
@@ -37,19 +40,25 @@ func produce(ctx context.Context, timeoutMs int, limit int)  {
 	})
 
 	for {
-		if (i > limit) {
+		if (i >= limit) {
+			wg.Wait()
 			return
 		}
-		err := w.WriteMessages(ctx, kafka.Message{
-			Key: []byte(strconv.Itoa(i)),
-			Value: []byte("this is message" + strconv.Itoa(i)),
-		})
-		if err != nil {
-			panic("could not write message " + err.Error())
-		}
-		fmt.Println("writes:", i)
+		
+		wg.Add(1) 
+		go func (key int) {	
+			defer wg.Done()
+			err := w.WriteMessages(ctx, kafka.Message{
+				Key: []byte(strconv.Itoa(key)),
+				Value: []byte("this is message" + strconv.Itoa(key) + ". Time: " + time.Now().String()),
+			})
+			if err != nil {
+				panic("could not write message " + err.Error())
+			}
+			fmt.Println("writes:", key)
+		} (i)
+		
 		i++
-		time.Sleep(time.Duration(timeoutMs))
 	}
 }
 
