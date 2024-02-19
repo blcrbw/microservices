@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.19
+FROM golang:1.22
 
 # Set destination for COPY
 WORKDIR /app
@@ -14,7 +14,7 @@ RUN go mod download
 COPY *.go ./
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-go-consumer
+RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-go-producer
 
 # To bind to a TCP port, runtime parameters must be supplied to the docker command.
 # But we can (optionally) document in the Dockerfile what ports
@@ -23,4 +23,4 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-go-consumer
 EXPOSE 8080
 
 # Run
-CMD [ "/docker-go-consumer" ]
+CMD [ "/docker-go-producer" ]

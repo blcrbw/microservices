@@ -1,5 +1,6 @@
 /.env
-/storage/kafka-0/data/
-/storage/kafka-1/data/
-/storage/kafka-2/data/
+/storage
+/storage/*
 /.idea
+/services/consumer/db_config.yml
+/services/consumer/worker

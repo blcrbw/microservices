@@ -6,7 +6,7 @@ networks:
 
 services:
   go-producer:
-    build: ./producer
+    build: ./services/producer
     hostname: go-producer
     restart: always
     ports:
@@ -14,26 +14,31 @@ services:
     networks:
       - platform
     volumes:
-      - ./producer:/app
+      - ./services/producer:/app
     env_file:
       - .env
 
   go-consumer:
-    build: ./consumer
+    build: ./services/consumer
     hostname: go-consumer
     restart: always
     networks:
       - platform
     volumes:
-      - ./consumer:/app
+      - ./services/consumer:/app
+      - ./storage/db_config.yml:/executable/db_config.yml
+      - ./.env:/executable/.env
     env_file:
       - .env
+    command:
+      - "/executable/worker"
 
   postgres:
     hostname: postgres
     image: postgres:latest
     volumes:
       - ./base.sql:/docker-entrypoint-initdb.d/base.sql
+      - ./storage/postgres-data:/var/lib/postgresql/data
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PW}
