@@ -6,15 +6,12 @@ FROM golang:1.22
 WORKDIR /app
 
 # Download Go modules
-COPY go.mod go.sum ./
+#COPY go.mod go.sum ./
+COPY . .
 RUN go mod download
 
-# Copy the source code. Note the slash at the end, as explained in
-# https://docs.docker.com/engine/reference/builder/#copy
-COPY *.go ./
-
 # Build
-RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-go-producer
+RUN CGO_ENABLED=0 GOOS=linux go build -o /executable/worker cmd/app/app.go
 
 # To bind to a TCP port, runtime parameters must be supplied to the docker command.
 # But we can (optionally) document in the Dockerfile what ports
@@ -23,4 +20,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-go-producer
 EXPOSE 8080
 
 # Run
-CMD [ "/docker-go-producer" ]
+WORKDIR /executable
+RUN chmod +x worker
+CMD ["/executable/worker"]

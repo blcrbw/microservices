@@ -17,47 +17,44 @@ import (
 )
 
 const (
-	testTopic     = "test"
-	userTopic     = "user"
-	productTopic  = "product"
+	testTopic      = "test"
+	userTopic      = "user"
+	productTopic   = "product"
 	broker0Address = "kafka-0:9092"
 	broker1Address = "kafka-1:9092"
 	broker2Address = "kafka-2:9092"
 )
 
-type myJSON struct {
-    Array []string
-}
-
-func produce(ctx context.Context, timeoutMs int, limit int)  {
+func produce(ctx context.Context, timeoutMs int, limit int) {
 	var wg sync.WaitGroup
 
 	i := 0
 
-	w := kafka.NewWriter(kafka.WriterConfig{
-		Brokers: []string{broker0Address, broker1Address, broker2Address},
-		Topic:   testTopic,
-	})
+	w := &kafka.Writer{
+		Addr:  kafka.TCP(broker0Address, broker1Address, broker2Address),
+		Topic: testTopic,
+	}
 
 	for {
-		if (i >= limit) {
+		if i >= limit {
 			wg.Wait()
+			fmt.Println(fmt.Sprintf("%d items written.", limit))
 			return
 		}
-		
-		wg.Add(1) 
-		go func (key int) {	
+
+		wg.Add(1)
+		go func(key int) {
 			defer wg.Done()
 			err := w.WriteMessages(ctx, kafka.Message{
-				Key: []byte(strconv.Itoa(key)),
-				Value: []byte("this is message" + strconv.Itoa(key) + ". Time: " + time.Now().String()),
+				Key:   []byte(strconv.Itoa(key)),
+				Value: []byte(fmt.Sprintf("this is message %d. Time: %d", key, time.Now().Unix())),
 			})
 			if err != nil {
 				panic("could not write message " + err.Error())
 			}
 			fmt.Println("writes:", key)
-		} (i)
-		
+		}(i)
+
 		i++
 	}
 }
@@ -104,9 +101,9 @@ func main() {
 
 	e.GET("/initTopics", func(c echo.Context) error {
 		initTopics()
-		return  c.HTML(http.StatusOK, "Topics initialized!")
+		return c.HTML(http.StatusOK, "Topics initialized!")
 	})
-	
+
 	e.GET("/test", func(c echo.Context) error {
 		var realTimeout int
 		var realLimit int
@@ -126,7 +123,8 @@ func main() {
 		ctx := context.Background()
 		go produce(ctx, realTimeout, realLimit)
 
-		return c.HTML(http.StatusOK, "Test started!")
+		res := fmt.Sprintf("Test started at %s!\nNumber of items: %d", time.Now().Format("02/01/2006 15:04:05"), realLimit)
+		return c.HTML(http.StatusOK, res)
 	})
 
 	httpPort := os.Getenv("PORT")

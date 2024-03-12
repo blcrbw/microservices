@@ -15,8 +15,11 @@ services:
       - platform
     volumes:
       - ./services/producer:/app
+      - ./.env:/executable/.env
     env_file:
       - .env
+    command:
+      - "/executable/worker"
 
   go-consumer:
     build: ./services/consumer
@@ -48,6 +51,8 @@ services:
     restart: always
     networks:
       - platform
+    env_file:
+      - .env
 
   pgadmin:
     hostname: pgadmin

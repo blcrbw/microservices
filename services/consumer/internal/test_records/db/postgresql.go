@@ -38,6 +38,57 @@ func (r *repository) Create(ctx context.Context, record *test_records.TestRecord
 	return nil
 }
 
+func (r *repository) CreateMultiple(ctx context.Context, records []*test_records.TestRecord) error {
+	tx, err := r.client.Begin(ctx)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback(ctx)
+		} else {
+			tx.Commit(ctx)
+		}
+	}()
+	q := `
+		INSERT INTO test_records
+			(text, created, stored)
+		VALUES 
+	`
+	vals := make([]interface{}, 0)
+	phId := 0
+	for idx := range records {
+		q += fmt.Sprintf("($%d, $%d, $%d),", phId+1, phId+2, phId+3)
+		vals = append(vals, records[idx].Text, records[idx].Created, records[idx].Stored)
+		phId += 3
+	}
+	q = q[0 : len(q)-1]
+	q += " RETURNING id"
+
+	rows, err := tx.Query(ctx, q, vals...)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			pgErr = err.(*pgconn.PgError)
+
+			newErr := fmt.Errorf(fmt.Sprintf("SQL Error: %s, Detail: %s, Where: %s, Code: %s, SQLState: %s", pgErr.Message, pgErr.Detail, pgErr.Where, pgErr.Code, pgErr.SQLState()))
+			fmt.Println(newErr)
+			return newErr
+		}
+		return err
+	} else {
+		for k := 0; rows.Next(); k++ {
+			if err := rows.Scan(&records[k].ID); err != nil {
+				fmt.Println(err)
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func (r *repository) Update(ctx context.Context, record *test_records.TestRecord) error {
 	q := `
 		UPDATE test_records
